@@ -17,7 +17,7 @@ threshold = 0.03
 H1 = 8
 H2 = 7
 model_path = "./model/model.pt"
-seed = 5
+seed = 2
 train = False
 torch.manual_seed(seed)
 train_data = np.loadtxt("./dataset/shuttle.trn", dtype=np.float32)
@@ -141,7 +141,7 @@ for k in K:
         abnormal_losses_zoomed = abnormal_losses[abnormal_losses <= 2.0]
 
 
-        bins_zoomed = np.linspace(0.0, 0.5, 101)  # 100 intervals
+        bins_zoomed = np.linspace(0.0, 0.2, 101)  # 100 intervals
         bins_normal = np.linspace(0, normal_losses.max(), 1001)
         bins_abnormal = np.linspace(0, abnormal_losses.max(), 1001)
         fig, ax = plt.subplots(2, 2, figsize=(12, 4))
@@ -169,3 +169,4 @@ for k in K:
 
 
         test_loss /= len(testloader)
+    print(f"test loss : {test_loss}")
