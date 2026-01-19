@@ -9,12 +9,17 @@ import torch.optim as optim
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
-K = [7]
+K = [6]
 batch_size = 256
 lr = 0.0015
-epochs = 40
-threshold = 0.02
-
+epochs = 80
+threshold = 0.03
+H1 = 8
+H2 = 7
+model_path = "./model/model.pt"
+seed = 5
+train = False
+torch.manual_seed(seed)
 train_data = np.loadtxt("./dataset/shuttle.trn", dtype=np.float32)
 test_data = np.loadtxt("./dataset/shuttle.tst", dtype=np.float32)
 
@@ -48,9 +53,10 @@ testloader = torch.utils.data.DataLoader(valid_test_dataset, batch_size=1, shuff
 for k in K:
     train_loss_history = []
     test_loss_history = []
-    model = Net(K=k).to(device)
+    model = Net(H1=H1, H2=H2, K=k).to(device)
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
+
     for epoch in range(epochs):
         model.train()
         epoch_loss = 0
@@ -96,6 +102,7 @@ for k in K:
     with torch.no_grad():
         for data, label in testloader:
             data = data.to(device)
+            label = label.to(device)
             data_latent, data_reconstruct = model(data)
             loss = loss_fn(data_reconstruct, data)
 
@@ -123,30 +130,42 @@ for k in K:
         accuracy = (VP+VN)/(VP+FP+FN+VN)
         print (f"###########################################################################\n"
                f"F score = {F1}\n"
-               f"Accuracy = {accuracy*100}%")
+               f"Accuracy = {accuracy*100:.2f}%")
 
 
 
 
         normal_losses = np.array(normal_losses)
         abnormal_losses = np.array(abnormal_losses)
-        normal_losses = normal_losses[normal_losses <= 2.0]
-        abnormal_losses = abnormal_losses[abnormal_losses <= 2.0]
+        normal_losses_zoomed = normal_losses[normal_losses <= 2.0]
+        abnormal_losses_zoomed = abnormal_losses[abnormal_losses <= 2.0]
 
-        loss_max = max(normal_losses.max(), abnormal_losses.max())
-        bins = np.linspace(0.0, 2.0, 1001)  # 100 intervals
 
-        fig, ax = plt.subplots(1, 2, figsize=(12, 4))
-        ax[0].hist(normal_losses, bins=bins)
-        ax[0].set_title("target = 1")
-        ax[1].hist(abnormal_losses, bins=bins)
-        ax[1].set_title("target != 1")
-        for a in ax:
+        bins_zoomed = np.linspace(0.0, 0.5, 101)  # 100 intervals
+        bins_normal = np.linspace(0, normal_losses.max(), 1001)
+        bins_abnormal = np.linspace(0, abnormal_losses.max(), 1001)
+        fig, ax = plt.subplots(2, 2, figsize=(12, 4))
+        ax[0, 0].hist(normal_losses, bins=bins_normal)
+        ax[0, 1].hist(abnormal_losses, bins=bins_abnormal)
+        ax[1, 0].hist(normal_losses_zoomed, bins=bins_zoomed)
+        ax[1, 1].hist(abnormal_losses_zoomed, bins=bins_zoomed)
+        ax[1, 0].axvline(x=0.03, color='r', linestyle='--', linewidth=2)
+        ax[1, 1].axvline(x=0.03, color='r', linestyle='--', linewidth=2)
+
+
+        ax[0, 0].set_title("Histogramme des pertes des données normales")
+        ax[0, 1].set_title("Histogramme des pertes des données anormales")
+        ax[1, 0].set_title("Histogramme des pertes des données normales (zoomed)")
+        ax[1, 1].set_title("Histogramme des pertes des données anormales (zoomed)")
+        for a in ax.flat:  # FIX 5: correct iteration over axes
             a.set_xlabel("Reconstruction loss (MSE)")
+            a.set_ylabel("Number of samples")
             a.grid(True)
-        ax[0].set_ylabel("Number of samples")
         plt.tight_layout()
+        plt.savefig(f'./figures/histogram/histogramK{k}_all.png')
+
         plt.show()
+
 
 
         test_loss /= len(testloader)

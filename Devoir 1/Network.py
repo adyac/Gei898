@@ -1,10 +1,8 @@
 import torch.nn as nn
 
 class Net(nn.Module):
-    def __init__(self, K, D=9):
+    def __init__(self, H1, H2, K, D=9):
         super().__init__()
-        H1 = 32
-        H2 = 16
         H3 = H2
         H4 = H1
         self.encodeur = nn.Sequential(
