@@ -13,19 +13,20 @@ def prepare_data(train_path, test_path):
     test_data = pd.read_csv(test_path, sep=' ', names=column_names)
 
     X_train = train_data[train_data['classe'] == 1].drop(columns=['classe']).values
-
     # Normalize Test and Train values
     means = np.mean(X_train, axis=0) # Avec axis = 0, on calcule means et stds de chaque colonne s1,s2...
     stds = np.std(X_train, axis=0)
     X_train_norm = (X_train - means) / (stds + 1e-8)
+
     X_test = test_data.drop(columns=['classe']).values  # Retirer la dernière colonne
     X_test_norm = (X_test - means) / (stds + 1e-8)      # normaliser valeurs de test aussi, car modèle entrainé sur valeurs normalisées
-                                                        # échelles differentes, donc modele ne reconnaitra pas ordres de grandeur des données test
+                                                        # utiliser means et stds trouvés sur X_train sur X_test pour garder mm echelle de normalisation
     y_test = test_data['classe'].values   # Garder les étiquettes de classe pour calculer F-mesure plus tard
 
     return X_train_norm, X_test_norm, y_test, means, stds
 
 # Load data
+# Should use a data loader
 X_train_norm, X_test_norm, y_test, means, stds = prepare_data('dataset/shuttle.trn', 'dataset/shuttle.tst')
 
 # Convertir en tenseur PyTorch
@@ -42,6 +43,8 @@ batch_size = 256
 num_epochs = 50
 for epoch in range(num_epochs):
     model.train()
+
+    #Feed batch size to model not all of them
     output = model(X_train_tensor)
     loss = criterion(output, X_train_tensor)  # Calcul diff entre entrée et sortie
 
